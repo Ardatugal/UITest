@@ -10,12 +10,20 @@ class HomeViewController: UIViewController {
     // Groups that have at least one photo (excluding empty ones)
     var nonEmptyGroups: [PhotoGroup] = []
 
+    // Optional: UI for showing scan progress (not required by original code)
+    // let progressBar = UIProgressView(progressViewStyle: .default)
+    // let progressLabel = UILabel()
+
     override func viewDidLoad() {
         super.viewDidLoad()
         title = "Photo Groups"
 
+        photoScanner = PhotoScanner()
+
         setupCollectionView()
-        loadGroups()
+        setupScanningCallbacks()
+
+        startScan()
     }
 
     func setupCollectionView() {
@@ -33,16 +41,32 @@ class HomeViewController: UIViewController {
         view.addSubview(collectionView)
     }
 
-    func loadGroups() {
-        // Get all groups with counts from photoScanner, filter out empty ones
-        nonEmptyGroups = photoScanner.groupCounts.filter { $0.value > 0 }.map { $0.key }
-        
-        // Ensure 'other' is included if non-empty, and avoid duplicates
-        if let otherCount = photoScanner.groupCounts[.other], otherCount > 0, !nonEmptyGroups.contains(.other) {
-            nonEmptyGroups.append(.other)
+    func setupScanningCallbacks() {
+        photoScanner.onProgressUpdate = { [weak self] processed, total, groupCounts in
+            guard let self = self else { return }
+
+            // Update nonEmptyGroups as scan progresses
+            self.nonEmptyGroups = groupCounts.filter { $0.value > 0 }.map { $0.key }
+            
+            // Ensure 'other' group is included if it has assets
+            if let otherCount = groupCounts[.other], otherCount > 0, !self.nonEmptyGroups.contains(.other) {
+                self.nonEmptyGroups.append(.other)
+            }
+            
+            DispatchQueue.main.async {
+                self.collectionView.reloadData()
+                // Optionally update progress UI here if you add it
+            }
         }
-        
-        collectionView.reloadData()
+
+        photoScanner.onScanComplete = {
+            print("Scan complete!")
+            // Optionally do something on completion
+        }
+    }
+
+    func startScan() {
+        photoScanner.startScan()
     }
 }
 
@@ -71,3 +95,4 @@ extension HomeViewController: UICollectionViewDataSource, UICollectionViewDelega
         navigationController?.pushViewController(hostingVC, animated: true)
     }
 }
+
