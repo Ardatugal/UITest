@@ -48,3 +48,9 @@ struct AssetThumbnailView: UIViewRepresentable {
         // No update needed here because PHCachingImageManager handles caching
     }
 }
+
+extension Int: Identifiable {
+    public var id: Int {
+        self
+    }
+}
